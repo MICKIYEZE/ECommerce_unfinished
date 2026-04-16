@@ -24,7 +24,7 @@ type userRepo struct{
 }
 
 func NewUserRepository(db *database.DB) UserRepository{
-	return &userRepo{db : db}
+	return &userRepo{db: db}
 }
 
 func (u *userRepo) Create(ctx context.Context, user *models.User) error{

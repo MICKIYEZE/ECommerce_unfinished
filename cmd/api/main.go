@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	"internal/db/postgres"
+
 )
 
 func main() {
@@ -41,6 +43,12 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
+
+	log.Println("Database connection establoshed")
+	userRepo := postgres.NewUserRepository(database)
+
+
+	userSvc := userService.NewService(userRepo)
 
 	server := &http.Server{
 		Addr:         ":" + serverPort,
