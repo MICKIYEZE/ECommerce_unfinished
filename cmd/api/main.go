@@ -1,19 +1,22 @@
 package main
 
 import (
-	"context"
-	"ecommerce/internal/db"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+    "context"
+    "log"
+    "net/http"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
 
-	"github.com/joho/godotenv"
-	"internal/db/postgres"
+    "ecommerce/internal/db"
+    "ecommerce/internal/handler/http"
+    "ecommerce/internal/repository/postgrers"
+    "ecommerce/internal/service/user"
 
+    "github.com/joho/godotenv"
 )
+
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -27,7 +30,7 @@ func main() {
 	dbName := getEnv("DB_NAME", "ecommerce_db")
 	dbSSLMode := getEnv("DB_SSLMODE", "disable")
 	serverPort := getEnv("SERVER_PORT", "8080")
-	//jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-in-production")
+	jwtSecret := getEnv("JWT_SECRET", "your-secret-key-change-in-production")
 
 	dbConfig := db.Config{
 		Host:     dbHost,
@@ -45,14 +48,20 @@ func main() {
 	defer database.Close()
 
 	log.Println("Database connection establoshed")
+
 	userRepo := postgres.NewUserRepository(database)
 
-
+	authSvc := authService.NewService(userRepo,jwtSecret)
 	userSvc := userService.NewService(userRepo)
+
+	router := httpHandler.NewRouter(httpHandler.RouterConfig{
+		AuthService: authSvc,
+		UserService: userSvc,
+	})
 
 	server := &http.Server{
 		Addr:         ":" + serverPort,
-		Handler:      nil,
+		Handler:      router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

@@ -1,26 +1,26 @@
-package service
+package user
 
-import models "ecommerce/internal/domain"
+import "ecommerce/internal/domain"
 
 type UserFilter struct {
-	Search  string
-	Role    *string
-	Limit   int
-	Offset  int
-	OrderBy string
+    Search  string  `json:"search"`
+    Role    *string `json:"role"`
+    Limit   int     `json:"limit"`
+    Offset  int     `json:"offset"`
+    OrderBy string  `json:"order_by"`
 }
 
 type UserListResponse struct {
-	Users  []*models.User
-	Total  int
-	Limit  int
-	Offset int
+    Users  []*domain.User `json:"users"`
+    Total  int            `json:"total"`
+    Limit  int            `json:"limit"`
+    Offset int            `json:"offset"`
 }
 
 type UpdateProfileRequest struct {
-	Email     *string
-	Password  *string
-	FirstName *string `json:"first_name" validate:"omniempty, min=2, max=100"`
-	LastName  *string `json:"last_name" validate:"omniempty, min=2, max=100"`
-	Role      *string
+    Email     *string `json:"email"`
+    Password  *string `json:"password"`
+    FirstName *string `json:"first_name" validate:"omitempty,min=2,max=100"`
+    LastName  *string `json:"last_name" validate:"omitempty,min=2,max=100"`
+    Role      *string `json:"role"`
 }

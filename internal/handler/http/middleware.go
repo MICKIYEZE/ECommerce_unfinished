@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	authService "ecommerce/internal/service/auth"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -14,6 +15,40 @@ const (
 	ContextKeyUserRole  contextKey = "user_role"
 	ContextKeyUserEmail contextKey = "user_email"
 )
+
+func RequireAuth(authSrv authService.AuthService) func(http.Handler) http.Handler{
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request))
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == ""{
+				respondError(w, http.StatusUnauthorized, "missing auth header")
+				return
+			}
+
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2|| parts [0] != "Bearer"{
+				respondError(w, http.StatusUnauthorized,"Invalid auth header format")
+				return
+			}
+
+			tokenString := parts[1]
+
+			claims, err := authSrv.ValidateToken(tokenString)
+			if err != nil {
+				respondError(w,http.StatusUnauthorized,"Invalid or expired token")
+				return
+			}
+
+			ctx := r.Context()
+
+			ctx = context.WithValue(ctx,ContextKeyUserID,claims.UserID)
+			ctx = context.WithValue(ctx,ContextKeyUserRole,claims.Role)
+			ctx = context.WithValue(ctx,ContextKeyUserEmail,claims.Email)
+
+ 	}
+}
+
+
 func RequireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		role, ok := GetUserRoleFromContext(r.Context())

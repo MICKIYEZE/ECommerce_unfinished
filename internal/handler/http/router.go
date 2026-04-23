@@ -1,42 +1,46 @@
 package http
 
 import (
-	userService "ecommerce/internal/service/user"
 	"net/http"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	authService "ecommerce/internal/service/auth"
+	userService "ecommerce/internal/service/user"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
-type RouterConfig struct{
-	//AuthService authService.AuthService
-	UserService userService.UserService
+type RouterConfig struct {
+    UserService userService.UserService
+    AuthService authService.AuthService
 }
 
-func newRouter(config RouterConfig) *chi.Mux{
-	r := chi.NewRouter()
+func NewRouter(config RouterConfig) *chi.Mux {
+    r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+    // Global middleware
+    r.Use(middleware.Logger)
+    r.Use(middleware.Recoverer)
+    r.Use(middleware.RequestID)
+    r.Use(middleware.RealIP)
 
-	r.Get("/health",func(w http.ResponseWriter, r *http.Request) {
-		respondJSON(w, http.StatusOK, map[string]string{
-			"status": "ok",
-		})
-	})
+    // Health check
+    r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+        respondJSON(w, http.StatusOK, map[string]string{
+            "status": "ok",
+        })
+    })
 
-	r.Route("api/v1", func(r chi.Router){
-		r.Group(func(r chi.Router) {
-			userHandler := NewUserHandler(config.UserService)
-			userHandler.RegisterRoutes(r)
-		})
-	})
+    // API routes
+    r.Route("/api/v1", func(r chi.Router) {
+        userHandler := NewUserHandler(config.UserService)
+        userHandler.RegisterRoutes(r)
+    })
 
-	r.Group(func(r chi.Router) {
-		r.Use(RequireAdmin)
-	})
+    r.Group(func(r chi.Router) {
+        // r.Use(RequireAuth(config.AuthService))
+        r.Use(RequireAdmin)
+    })
 
-	return r
+    return r
 }
