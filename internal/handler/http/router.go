@@ -49,19 +49,17 @@ func NewRouter(config RouterConfig) *chi.Mux {
         r.Post("/auth/refresh", authHandler.Refresh)
 
         // ---------------------------
-        // USER ROUTES (PUBLIC + PROTECTED)
+        // USER ROUTES
         // ---------------------------
         userHandler := NewUserHandler(config.UserService)
 
-        // Public user routes
+        // Public user routes (if any)
         userHandler.RegisterRoutes(r)
 
         // Protected user routes
         r.Group(func(r chi.Router) {
             r.Use(RequireAuth(config.AuthService))
 
-            // Example protected routes:
-            r.Get("/users/me", userHandler.GetProfile)
             r.Put("/users/me", userHandler.UpdateProfile)
         })
 
@@ -72,7 +70,6 @@ func NewRouter(config RouterConfig) *chi.Mux {
             r.Use(RequireAuth(config.AuthService))
             r.Use(RequireAdmin)
 
-            // Example admin routes:
             r.Get("/admin/users", userHandler.ListUsers)
             r.Delete("/admin/users/{id}", userHandler.DeleteUser)
         })

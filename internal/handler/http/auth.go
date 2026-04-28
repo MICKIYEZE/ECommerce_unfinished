@@ -6,7 +6,6 @@ import (
 
     authService "ecommerce/internal/service/auth"
 
-    // Required so Swag can discover the types in this package
     _ "ecommerce/internal/service/auth"
 )
 
