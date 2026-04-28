@@ -5,18 +5,22 @@ import (
     "fmt"
 
     "ecommerce/internal/db"
-    "ecommerce/internal/domain"
+    "ecommerce/internal/domain/entity"
 
     "github.com/google/uuid"
 )
 
 type UserRepository interface {
-    Create(ctx context.Context, user *domain.User) error
-    GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
-    GetByEmail(ctx context.Context, email string) (*domain.User, error)
-    Update(ctx context.Context, user *domain.User) error
+    Create(ctx context.Context, user *entity.User) error
+    GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
+    GetByEmail(ctx context.Context, email string) (*entity.User, error)
+    Update(ctx context.Context, user *entity.User) error
     Delete(ctx context.Context, id uuid.UUID) error
-    List(ctx context.Context, limit, offset int) ([]*domain.User, error)
+    List(ctx context.Context, limit, offset int) ([]*entity.User, error)
+    
+    StoreRefreshToken(ctx context.Context, userID uuid.UUID, token string) error
+    GetUserByRefreshToken(ctx context.Context, token string) (*entity.User, error)
+    DeleteRefreshToken(ctx context.Context, token string) error
 }
 
 type userRepo struct {
@@ -27,7 +31,7 @@ func NewUserRepository(db *db.DB) UserRepository {
     return &userRepo{db: db}
 }
 
-func (u *userRepo) Create(ctx context.Context, user *domain.User) error {
+func (u *userRepo) Create(ctx context.Context, user *entity.User) error {
     query := `
         INSERT INTO users (id, email, password_hash, first_name, surname, role)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -43,7 +47,7 @@ func (u *userRepo) Create(ctx context.Context, user *domain.User) error {
         user.Email,
         user.PasswordHash,
         user.FirstName,
-        user.Surname,
+        user.LastName,
         user.Role,
     ).Scan(&user.CreatedAt, &user.UpdatedAt)
 }
@@ -64,8 +68,8 @@ func (u *userRepo) Delete(ctx context.Context, id uuid.UUID) error {
     return nil
 }
 
-func (u *userRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-    var user domain.User
+func (u *userRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+    var user entity.User
 
     query := `
         SELECT id, email, password_hash, first_name, surname, role, created_at, updated_at
@@ -81,8 +85,8 @@ func (u *userRepo) GetByEmail(ctx context.Context, email string) (*domain.User, 
     return &user, nil
 }
 
-func (u *userRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-    var user domain.User
+func (u *userRepo) GetByID(ctx context.Context, id uuid.UUID) (*entity.User, error) {
+    var user entity.User
 
     query := `
         SELECT id, email, password_hash, first_name, surname, role, created_at, updated_at
@@ -98,7 +102,7 @@ func (u *userRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, err
     return &user, nil
 }
 
-func (u *userRepo) Update(ctx context.Context, user *domain.User) error {
+func (u *userRepo) Update(ctx context.Context, user *entity.User) error {
     query := `
         UPDATE users
         SET first_name = $1,
@@ -112,12 +116,12 @@ func (u *userRepo) Update(ctx context.Context, user *domain.User) error {
         ctx,
         query,
         user.FirstName,
-        user.Surname,
+        user.LastName,
         user.ID,
     ).Scan(&user.UpdatedAt)
 }
 
-func (u *userRepo) List(ctx context.Context, limit, offset int) ([]*domain.User, error) {
+func (u *userRepo) List(ctx context.Context, limit, offset int) ([]*entity.User, error) {
     query := `
         SELECT id, email, password_hash, first_name, surname, role, created_at, updated_at
         FROM users
@@ -125,7 +129,7 @@ func (u *userRepo) List(ctx context.Context, limit, offset int) ([]*domain.User,
         LIMIT $1 OFFSET $2
     `
 
-    var users []*domain.User
+    var users []*entity.User
 
     err := u.db.SelectContext(ctx, &users, query, limit, offset)
     if err != nil {
@@ -133,4 +137,47 @@ func (u *userRepo) List(ctx context.Context, limit, offset int) ([]*domain.User,
     }
 
     return users, nil
+}
+
+
+
+func (u *userRepo) StoreRefreshToken(ctx context.Context, userID uuid.UUID, token string) error {
+    query := `
+        INSERT INTO refresh_tokens (user_id, token)
+        VALUES ($1, $2)
+    `
+    _, err := u.db.ExecContext(ctx, query, userID, token)
+    if err != nil {
+        return fmt.Errorf("failed to store refresh token: %w", err)
+    }
+    return nil
+}
+
+func (u *userRepo) GetUserByRefreshToken(ctx context.Context, token string) (*entity.User, error) {
+    var user entity.User
+
+    query := `
+        SELECT u.id, u.email, u.password_hash, u.first_name, u.surname, u.role, u.created_at, u.updated_at
+        FROM users u
+        JOIN refresh_tokens rt ON rt.user_id = u.id
+        WHERE rt.token = $1
+    `
+
+    err := u.db.GetContext(ctx, &user, query, token)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get user by refresh token: %w", err)
+    }
+
+    return &user, nil
+}
+
+func (u *userRepo) DeleteRefreshToken(ctx context.Context, token string) error {
+    query := `DELETE FROM refresh_tokens WHERE token = $1`
+
+    _, err := u.db.ExecContext(ctx, query, token)
+    if err != nil {
+        return fmt.Errorf("failed to delete refresh token: %w", err)
+    }
+
+    return nil
 }

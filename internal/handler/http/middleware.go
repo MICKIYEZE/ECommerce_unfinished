@@ -1,97 +1,104 @@
 package http
 
 import (
-	"context"
-	authService "ecommerce/internal/service/auth"
-	"net/http"
+    "context"
+    "net/http"
+    "strings"
 
-	"github.com/google/uuid"
+    authService "ecommerce/internal/service/auth"
+    "github.com/google/uuid"
 )
 
 type contextKey string
 
 const (
-	ContextKeyUserID    contextKey = "user_id"
-	ContextKeyUserRole  contextKey = "user_role"
-	ContextKeyUserEmail contextKey = "user_email"
+    ContextKeyUserID    contextKey = "user_id"
+    ContextKeyUserRole  contextKey = "user_role"
+    ContextKeyUserEmail contextKey = "user_email"
 )
 
-func RequireAuth(authSrv authService.AuthService) func(http.Handler) http.Handler{
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request))
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == ""{
-				respondError(w, http.StatusUnauthorized, "missing auth header")
-				return
-			}
+// RequireAuth validates JWT and injects user info into context
+func RequireAuth(authSrv authService.AuthService) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2|| parts [0] != "Bearer"{
-				respondError(w, http.StatusUnauthorized,"Invalid auth header format")
-				return
-			}
+            authHeader := r.Header.Get("Authorization")
+            if authHeader == "" {
+                respondError(w, http.StatusUnauthorized, "missing auth header")
+                return
+            }
 
-			tokenString := parts[1]
+            parts := strings.Split(authHeader, " ")
+            if len(parts) != 2 || parts[0] != "Bearer" {
+                respondError(w, http.StatusUnauthorized, "invalid auth header format")
+                return
+            }
 
-			claims, err := authSrv.ValidateToken(tokenString)
-			if err != nil {
-				respondError(w,http.StatusUnauthorized,"Invalid or expired token")
-				return
-			}
+            tokenString := parts[1]
 
-			ctx := r.Context()
+            claims, err := authSrv.ValidateToken(tokenString)
+            if err != nil {
+                respondError(w, http.StatusUnauthorized, "invalid or expired token")
+                return
+            }
 
-			ctx = context.WithValue(ctx,ContextKeyUserID,claims.UserID)
-			ctx = context.WithValue(ctx,ContextKeyUserRole,claims.Role)
-			ctx = context.WithValue(ctx,ContextKeyUserEmail,claims.Email)
+            ctx := r.Context()
+            ctx = context.WithValue(ctx, ContextKeyUserID, claims.UserID)
+            ctx = context.WithValue(ctx, ContextKeyUserRole, claims.Role)
+            ctx = context.WithValue(ctx, ContextKeyUserEmail, claims.Email)
 
- 	}
+            next.ServeHTTP(w, r.WithContext(ctx))
+        })
+    }
 }
 
-
+// RequireAdmin ensures the user has admin role
 func RequireAdmin(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		role, ok := GetUserRoleFromContext(r.Context())
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        role, ok := GetUserRoleFromContext(r.Context())
+        if !ok {
+            respondError(w, http.StatusUnauthorized, "user not authenticated")
+            return
+        }
 
-		if !ok {
-			respondError(w, http.StatusUnauthorized, "User not authenticated")
-			return
-		}
+        if role != "admin" {
+            respondError(w, http.StatusForbidden, "admin access required")
+            return
+        }
 
-		if role != "admin" {
-			respondError(w, http.StatusForbidden, "Admin access required")
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+        next.ServeHTTP(w, r)
+    })
 }
-// Cors - Cross-Origin Resourse Sharing
-func CORS(next http.Handler) http.Handler{
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept,Content-Type,Content-Length,Accept-Encoding,Authorization")
-		w.Header().Set("Access-Control-Max-Age", "3600")
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+// CORS middleware
+func CORS(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Accept,Content-Type,Content-Length,Accept-Encoding,Authorization")
+        w.Header().Set("Access-Control-Max-Age", "3600")
 
-		next.ServeHTTP(w, r)
-	})
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+
+        next.ServeHTTP(w, r)
+    })
 }
+
+// Context helpers
 func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
-	userID, ok := ctx.Value(ContextKeyUserID).(uuid.UUID)
-	return userID, ok
+    userID, ok := ctx.Value(ContextKeyUserID).(uuid.UUID)
+    return userID, ok
 }
 
 func GetUserRoleFromContext(ctx context.Context) (string, bool) {
-	role, ok := ctx.Value(ContextKeyUserRole).(string)
-	return role, ok
+    role, ok := ctx.Value(ContextKeyUserRole).(string)
+    return role, ok
 }
 
 func GetUserEmailFromContext(ctx context.Context) (string, bool) {
-	email, ok := ctx.Value(ContextKeyUserEmail).(string)
-	return email, ok
+    email, ok := ctx.Value(ContextKeyUserEmail).(string)
+    return email, ok
 }

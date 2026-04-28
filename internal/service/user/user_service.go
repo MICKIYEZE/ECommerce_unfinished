@@ -5,16 +5,16 @@ import (
     "fmt"
     "strings"
 
-    "ecommerce/internal/domain"
-    "ecommerce/internal/repository/postgrers"
+    "ecommerce/internal/domain/entity"
+    "ecommerce/internal/repository/postgres"
 
     "github.com/google/uuid"
     "golang.org/x/crypto/bcrypt"
 )
 
 type UserService interface {
-    GetProfile(ctx context.Context, id uuid.UUID) (*domain.User, error)
-    UpdateProfile(ctx context.Context, id uuid.UUID, req UpdateProfileRequest, isAdmin bool) (*domain.User, error)
+    GetProfile(ctx context.Context, id uuid.UUID) (*entity.User, error)
+    UpdateProfile(ctx context.Context, id uuid.UUID, req UpdateProfileRequest, isAdmin bool) (*entity.User, error)
     ListUser(ctx context.Context, filter UserFilter) (*UserListResponse, error)
     Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -27,7 +27,7 @@ func NewService(userRepo postgres.UserRepository) UserService {
     return &service{userRepo: userRepo}
 }
 
-func (s *service) GetProfile(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (s *service) GetProfile(ctx context.Context, id uuid.UUID) (*entity.User, error) {
     user, err := s.userRepo.GetByID(ctx, id)
     if err != nil {
         return nil, ErrUserNotFound
@@ -60,7 +60,7 @@ func (s *service) ListUser(ctx context.Context, filter UserFilter) (*UserListRes
         return nil, fmt.Errorf("failed to list users: %w", err)
     }
 
-    filtered := []*domain.User{}
+    filtered := []*entity.User{}
 
     for _, u := range users {
         if filter.Role != nil && u.Role != *filter.Role {
@@ -69,7 +69,7 @@ func (s *service) ListUser(ctx context.Context, filter UserFilter) (*UserListRes
 
         if filter.Search != "" &&
             !strings.Contains(strings.ToLower(u.FirstName), strings.ToLower(filter.Search)) &&
-            !strings.Contains(strings.ToLower(u.Surname), strings.ToLower(filter.Search)) {
+            !strings.Contains(strings.ToLower(u.LastName), strings.ToLower(filter.Search)) {
             continue
         }
 
@@ -77,12 +77,14 @@ func (s *service) ListUser(ctx context.Context, filter UserFilter) (*UserListRes
     }
 
     return &UserListResponse{
-        Users: filtered,
-        Total: len(filtered),
+        Users:  filtered,
+        Total:  len(filtered),
+        Limit:  filter.Limit,
+        Offset: filter.Offset,
     }, nil
 }
 
-func (s *service) UpdateProfile(ctx context.Context, id uuid.UUID, req UpdateProfileRequest, isAdmin bool) (*domain.User, error) {
+func (s *service) UpdateProfile(ctx context.Context, id uuid.UUID, req UpdateProfileRequest, isAdmin bool) (*entity.User, error) {
     user, err := s.userRepo.GetByID(ctx, id)
     if err != nil {
         return nil, ErrUserNotFound
@@ -93,7 +95,7 @@ func (s *service) UpdateProfile(ctx context.Context, id uuid.UUID, req UpdatePro
     }
 
     if req.LastName != nil {
-        user.Surname = *req.LastName
+        user.LastName = *req.LastName
     }
 
     if req.Email != nil {

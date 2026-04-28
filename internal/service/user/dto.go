@@ -1,6 +1,6 @@
 package user
 
-import "ecommerce/internal/domain"
+import "ecommerce/internal/domain/entity"
 
 type UserFilter struct {
     Search  string  `json:"search"`
@@ -11,7 +11,7 @@ type UserFilter struct {
 }
 
 type UserListResponse struct {
-    Users  []*domain.User `json:"users"`
+    Users  []*entity.User `json:"users"`
     Total  int            `json:"total"`
     Limit  int            `json:"limit"`
     Offset int            `json:"offset"`

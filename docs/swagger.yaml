@@ -1,0 +1,28 @@
+basePath: /api/v1
+host: localhost:8080
+info:
+  contact: {}
+  title: Ecommerce API
+  version: "1.0"
+paths:
+  /users:
+    put:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update user UpdateProfile
+      tags:
+      - user
+swagger: "2.0"
