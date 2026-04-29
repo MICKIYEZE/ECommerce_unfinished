@@ -1,9 +1,10 @@
 package http
 
 import (
+    "encoding/json"
     "net/http"
 
-    "github.com/gin-gonic/gin"
+    "github.com/go-chi/chi/v5"
     "github.com/google/uuid"
 
     "ecommerce/internal/service/cart"
@@ -22,32 +23,31 @@ func NewCartHandler(cartService cart.CartService) *CartHandler {
 // ---------------------------
 
 type AddItemRequest struct {
-    ProductID string `json:"product_id" binding:"required"`
-    Quantity  int    `json:"quantity" binding:"required"`
+    ProductID string `json:"product_id"`
+    Quantity  int    `json:"quantity"`
 }
 
-func (h *CartHandler) AddItem(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
+func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
+    userID := r.Context().Value("userID").(uuid.UUID)
 
     var req AddItemRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
         return
     }
 
     productID, err := uuid.Parse(req.ProductID)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid product ID"})
         return
     }
 
-    err = h.cartService.AddItem(userID, productID, req.Quantity)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := h.cartService.AddItem(userID, productID, req.Quantity); err != nil {
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "item added"})
+    respondJSON(w, http.StatusOK, map[string]string{"message": "item added"})
 }
 
 // ---------------------------
@@ -55,87 +55,84 @@ func (h *CartHandler) AddItem(c *gin.Context) {
 // ---------------------------
 
 type UpdateItemRequest struct {
-    ProductID string `json:"product_id" binding:"required"`
-    Quantity  int    `json:"quantity" binding:"required"`
+    ProductID string `json:"product_id"`
+    Quantity  int    `json:"quantity"`
 }
 
-func (h *CartHandler) UpdateItem(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
+func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
+    userID := r.Context().Value("userID").(uuid.UUID)
 
     var req UpdateItemRequest
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
         return
     }
 
     productID, err := uuid.Parse(req.ProductID)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid product ID"})
         return
     }
 
-    err = h.cartService.UpdateItem(userID, productID, req.Quantity)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := h.cartService.UpdateItem(userID, productID, req.Quantity); err != nil {
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "item updated"})
+    respondJSON(w, http.StatusOK, map[string]string{"message": "item updated"})
 }
 
 // ---------------------------
 // Remove Item
 // ---------------------------
 
-func (h *CartHandler) RemoveItem(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
+func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
+    userID := r.Context().Value("userID").(uuid.UUID)
 
-    productIDStr := c.Param("productID")
+    productIDStr := chi.URLParam(r, "productID")
     productID, err := uuid.Parse(productIDStr)
     if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid product ID"})
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid product ID"})
         return
     }
 
-    err = h.cartService.RemoveItem(userID, productID)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := h.cartService.RemoveItem(userID, productID); err != nil {
+        respondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "item removed"})
+    respondJSON(w, http.StatusOK, map[string]string{"message": "item removed"})
 }
 
 // ---------------------------
 // Clear Cart
 // ---------------------------
 
-func (h *CartHandler) ClearCart(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
+func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
+    userID := r.Context().Value("userID").(uuid.UUID)
 
-    err := h.cartService.ClearCart(userID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    if err := h.cartService.ClearCart(userID); err != nil {
+        respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "cart cleared"})
+    respondJSON(w, http.StatusOK, map[string]string{"message": "cart cleared"})
 }
 
 // ---------------------------
 // View Cart
 // ---------------------------
 
-func (h *CartHandler) GetCart(c *gin.Context) {
-    userID := c.MustGet("userID").(uuid.UUID)
+func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
+    userID := r.Context().Value("userID").(uuid.UUID)
 
     cart, items, err := h.cartService.GetCart(userID)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{
+    respondJSON(w, http.StatusOK, map[string]interface{}{
         "cart":  cart,
         "items": items,
     })
