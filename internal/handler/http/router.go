@@ -5,6 +5,7 @@ import (
 
     authService "ecommerce/internal/service/auth"
     userService "ecommerce/internal/service/user"
+    productService "ecommerce/internal/service/product"
 
     "github.com/go-chi/chi/v5"
     "github.com/go-chi/chi/v5/middleware"
@@ -12,8 +13,9 @@ import (
 )
 
 type RouterConfig struct {
-    UserService userService.UserService
-    AuthService authService.AuthService
+    UserService    userService.UserService
+    AuthService    authService.AuthService
+    ProductService productService.ProductService
 }
 
 func NewRouter(config RouterConfig) *chi.Mux {
@@ -43,7 +45,6 @@ func NewRouter(config RouterConfig) *chi.Mux {
         // AUTH ROUTES (PUBLIC)
         // ---------------------------
         authHandler := NewAuthHandler(config.AuthService)
-
         r.Post("/auth/register", authHandler.Register)
         r.Post("/auth/login", authHandler.Login)
         r.Post("/auth/refresh", authHandler.Refresh)
@@ -59,8 +60,28 @@ func NewRouter(config RouterConfig) *chi.Mux {
         // Protected user routes
         r.Group(func(r chi.Router) {
             r.Use(RequireAuth(config.AuthService))
-
             r.Put("/users/me", userHandler.UpdateProfile)
+        })
+
+        // ---------------------------
+        // PRODUCT ROUTES
+        // ---------------------------
+        productHandler := NewProductHandler(config.ProductService)
+
+        r.Route("/products", func(r chi.Router) {
+            // Public product routes
+            r.Get("/", productHandler.ListProducts)
+            r.Get("/{id}", productHandler.GetProduct)
+
+            // Admin-only product routes
+            r.Group(func(r chi.Router) {
+                r.Use(RequireAuth(config.AuthService))
+                r.Use(RequireAdmin)
+
+                r.Post("/", productHandler.CreateProduct)
+                r.Put("/{id}", productHandler.UpdateProduct)
+                r.Delete("/{id}", productHandler.DeleteProduct)
+            })
         })
 
         // ---------------------------

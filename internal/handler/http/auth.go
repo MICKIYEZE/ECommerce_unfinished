@@ -1,12 +1,13 @@
 package http
 
 import (
-    "encoding/json"
-    "net/http"
+	"encoding/json"
+	"fmt"
+	"net/http"
 
-    authService "ecommerce/internal/service/auth"
+	authService "ecommerce/internal/service/auth"
 
-    _ "ecommerce/internal/service/auth"
+	_ "ecommerce/internal/service/auth"
 )
 
 // AuthHandler handles authentication endpoints
@@ -18,6 +19,17 @@ func NewAuthHandler(authService authService.AuthService) *AuthHandler {
     return &AuthHandler{authService: authService}
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Creates a new user account
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "User registration data"
+// @Success 201 {object} entity.User
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /auth/register [post]
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
     var req authService.RegisterRequest
@@ -36,6 +48,17 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusCreated, user)
 }
 
+// Login godoc
+// @Summary Login user
+// @Description Authenticates a user and returns access + refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} LoginResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /auth/login [post]
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
     var req authService.LoginRequest
@@ -44,6 +67,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
         respondError(w, http.StatusBadRequest, "Invalid request body")
         return
     }
+
+    fmt.Println("REQ EMAIL:", "["+req.Email+"]")
+    fmt.Println("REQ PASSWORD:", "["+req.Password+"]")
 
     accessToken, refreshToken, err := h.authService.Login(r.Context(), req)
     if err != nil {
@@ -57,6 +83,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
     })
 }
 
+// Refresh godoc
+// @Summary Refresh access token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} TokenResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /auth/refresh [post]
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
     var body struct {

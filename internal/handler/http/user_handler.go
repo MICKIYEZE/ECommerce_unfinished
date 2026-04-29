@@ -28,6 +28,17 @@ func (h *UserHandler) RegisterRoutes(r chi.Router) {
     })
 }
 
+// UpdateProfile godoc
+// @Summary Update current user's profile
+// @Tags Users
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body UpdateUserRequest true "Updated user data"
+// @Success 200 {object} entity.User
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Router /users/me [put]
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
     userID, ok := GetUserIDFromContext(r.Context())
     if !ok {
@@ -67,6 +78,15 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, updatedUser)
 }
 
+// ListUsers godoc
+// @Summary List all users (admin only)
+// @Tags Admin
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} entity.User
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Router /admin/users [get]
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
     filter := userService.UserFilter{
         Search: r.URL.Query().Get("search"),
@@ -88,6 +108,16 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, users)
 }
 
+// DeleteUser godoc
+// @Summary Delete a user by ID (admin only)
+// @Tags Admin
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Router /admin/users/{id} [delete]
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
     idParam := chi.URLParam(r, "id")
     if idParam == "" {

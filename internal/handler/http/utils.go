@@ -22,3 +22,7 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
     w.WriteHeader(status)
     json.NewEncoder(w).Encode(data)
 }
+
+func decodeJSON(r *http.Request, v any) error {
+    return json.NewDecoder(r.Body).Decode(v)
+}

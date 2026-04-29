@@ -1,28 +1,133 @@
 basePath: /api/v1
+definitions:
+  entity.User:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  http.ErrorResponse:
+    properties:
+      error:
+        type: string
+      status:
+        type: integer
+    type: object
+  http.UpdateUserRequest:
+    properties:
+      first_name:
+        type: string
+      last_name:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
   title: Ecommerce API
   version: "1.0"
 paths:
-  /users:
-    put:
-      consumes:
-      - application/json
+  /admin/users:
+    get:
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
+            items:
+              $ref: '#/definitions/entity.User'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all users (admin only)
+      tags:
+      - Admin
+  /admin/users/{id}:
+    delete:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
             type: object
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
-      summary: Update user UpdateProfile
+            $ref: '#/definitions/http.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user by ID (admin only)
       tags:
-      - user
+      - Admin
+  /users/me:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Updated user data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/entity.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update current user's profile
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    description: Enter "Bearer <token>"
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

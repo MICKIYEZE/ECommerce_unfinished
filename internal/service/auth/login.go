@@ -16,7 +16,7 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (string, string, 
     email := req.Email
     password := req.Password
     
-    user, err := s.userRepo.GetByEmail(context.Background(), email)
+    user, err := s.userRepo.GetByEmail(ctx, email)
     if err != nil || user == nil {
         return "", "", errors.New("invalid credentials")
     }
@@ -31,12 +31,13 @@ func (s *service) Login(ctx context.Context, req LoginRequest) (string, string, 
     }
 
     refreshToken := uuid.New().String()
-    if err := s.userRepo.StoreRefreshToken(context.Background(), user.ID, refreshToken); err != nil {
+    if err := s.userRepo.StoreRefreshToken(ctx, user.ID, refreshToken); err != nil {
         return "", "", err
     }
 
     return accessToken, refreshToken, nil
 }
+
 
 func (s *service) generateToken(user *entity.User) (string, error) {
     claims := &Claims{

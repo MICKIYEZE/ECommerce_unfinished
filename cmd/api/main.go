@@ -1,3 +1,8 @@
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter "Bearer <token>"
+
 package main
 
 import (
@@ -14,9 +19,10 @@ import (
     "ecommerce/internal/repository/postgres"
     authService "ecommerce/internal/service/auth"
     userService "ecommerce/internal/service/user"
+    productService "ecommerce/internal/service/product"
+
     _ "github.com/lib/pq"
     _ "ecommerce/docs"
-
 
     "github.com/joho/godotenv"
 )
@@ -25,10 +31,6 @@ import (
 // @version 1.0
 // @host localhost:8080
 // @BasePath /api/v1
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
 
 func main() {
     if err := godotenv.Load(); err != nil {
@@ -61,17 +63,26 @@ func main() {
 
     log.Println("Database connection established")
 
-    // Repositories
+    // -------------------------
+    // REPOSITORIES
+    // -------------------------
     userRepo := postgres.NewUserRepository(database)
+    productRepo := postgres.NewProductRepository(database.DB)
 
-    // Services
+    // -------------------------
+    // SERVICES
+    // -------------------------
     authSvc := authService.NewService(userRepo, jwtSecret)
     userSvc := userService.NewService(userRepo)
+    productSvc := productService.NewService(productRepo)
 
-    // Router
+    // -------------------------
+    // ROUTER
+    // -------------------------
     router := httpHandler.NewRouter(httpHandler.RouterConfig{
-        AuthService: authSvc,
-        UserService: userSvc,
+        AuthService:    authSvc,
+        UserService:    userSvc,
+        ProductService: productSvc, 
     })
 
     server := &http.Server{

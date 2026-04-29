@@ -1,13 +1,13 @@
 package product
 
 import (
-    "context"
-    "errors"
+	"context"
+	"errors"
 
-    "ecommerce/internal/domain/entity"
-    "ecommerce/internal/domain/repository"
+	"ecommerce/internal/domain/entity"
+	"ecommerce/internal/domain/repository"
 
-    "github.com/google/uuid"
+	"github.com/google/uuid"
 )
 
 type ProductService interface {
