@@ -18,15 +18,27 @@ func NewCartHandler(cartService cart.CartService) *CartHandler {
     return &CartHandler{cartService: cartService}
 }
 
-// ---------------------------
+// ===============================
 // Add Item
-// ---------------------------
+// ===============================
 
+// AddItemRequest represents the request body for adding an item to the cart
 type AddItemRequest struct {
     ProductID string `json:"product_id"`
     Quantity  int    `json:"quantity"`
 }
 
+// AddItem godoc
+// @Summary Add item to cart
+// @Description Adds a product to the authenticated user's cart
+// @Tags Cart
+// @Accept json
+// @Produce json
+// @Param request body AddItemRequest true "Add Item Payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /cart/add [post]
+// @Security BearerAuth
 func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
     userID := r.Context().Value("userID").(uuid.UUID)
 
@@ -50,15 +62,26 @@ func (h *CartHandler) AddItem(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, map[string]string{"message": "item added"})
 }
 
-// ---------------------------
+// ===============================
 // Update Item
-// ---------------------------
+// ===============================
 
 type UpdateItemRequest struct {
     ProductID string `json:"product_id"`
     Quantity  int    `json:"quantity"`
 }
 
+// UpdateItem godoc
+// @Summary Update cart item quantity
+// @Description Updates the quantity of a product in the user's cart
+// @Tags Cart
+// @Accept json
+// @Produce json
+// @Param request body UpdateItemRequest true "Update Item Payload"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /cart/update [put]
+// @Security BearerAuth
 func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
     userID := r.Context().Value("userID").(uuid.UUID)
 
@@ -82,10 +105,20 @@ func (h *CartHandler) UpdateItem(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, map[string]string{"message": "item updated"})
 }
 
-// ---------------------------
+// ===============================
 // Remove Item
-// ---------------------------
+// ===============================
 
+// RemoveItem godoc
+// @Summary Remove item from cart
+// @Description Removes a product from the authenticated user's cart
+// @Tags Cart
+// @Produce json
+// @Param productID path string true "Product ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Router /cart/remove/{productID} [delete]
+// @Security BearerAuth
 func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
     userID := r.Context().Value("userID").(uuid.UUID)
 
@@ -104,10 +137,19 @@ func (h *CartHandler) RemoveItem(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, map[string]string{"message": "item removed"})
 }
 
-// ---------------------------
+// ===============================
 // Clear Cart
-// ---------------------------
+// ===============================
 
+// ClearCart godoc
+// @Summary Clear cart
+// @Description Removes all items from the authenticated user's cart
+// @Tags Cart
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /cart/clear [delete]
+// @Security BearerAuth
 func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
     userID := r.Context().Value("userID").(uuid.UUID)
 
@@ -119,10 +161,19 @@ func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
     respondJSON(w, http.StatusOK, map[string]string{"message": "cart cleared"})
 }
 
-// ---------------------------
+// ===============================
 // View Cart
-// ---------------------------
+// ===============================
 
+// GetCart godoc
+// @Summary Get user cart
+// @Description Returns the user's cart and all items inside it
+// @Tags Cart
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]string
+// @Router /cart [get]
+// @Security BearerAuth
 func (h *CartHandler) GetCart(w http.ResponseWriter, r *http.Request) {
     userID := r.Context().Value("userID").(uuid.UUID)
 

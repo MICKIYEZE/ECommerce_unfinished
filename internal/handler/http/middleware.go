@@ -17,7 +17,21 @@ const (
     ContextKeyUserEmail contextKey = "user_email"
 )
 
-// RequireAuth validates JWT and injects user info into context
+// func RequireAuth(_ authService.AuthService) func(http.Handler) http.Handler {
+//     return func(next http.Handler) http.Handler {
+//         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+//             // TEMPORARY: fake user ID so protected routes work
+//             fakeUserID := uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+//             ctx := context.WithValue(r.Context(), "userID", fakeUserID)
+//             next.ServeHTTP(w, r.WithContext(ctx))
+//         })
+//     }
+// }
+
+
+
 func RequireAuth(authSrv authService.AuthService) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -87,7 +101,6 @@ func CORS(next http.Handler) http.Handler {
     })
 }
 
-// Context helpers
 func GetUserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
     userID, ok := ctx.Value(ContextKeyUserID).(uuid.UUID)
     return userID, ok
